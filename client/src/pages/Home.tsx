@@ -77,6 +77,14 @@ export default function Home() {
               >
                 Browse Templates
               </Button>
+              <Button 
+                size="lg" 
+                variant="ghost"
+                className="text-lg px-8 py-6"
+                onClick={() => setLocation('/resources')}
+              >
+                Design Resources
+              </Button>
             </div>
           </div>
         </div>

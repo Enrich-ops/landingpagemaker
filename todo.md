@@ -46,3 +46,16 @@
 - [x] Implement state management for editor
 - [ ] Add vitest tests for core functionality (optional)
 - [x] Optimize bundle size and performance
+
+
+## Design Resources Website (New Project)
+- [x] Create resources data structure from research document
+- [x] Build resource gallery with cards for each tool/source
+- [x] Implement search functionality
+- [x] Add category filtering (Galleries, Tools, Extensions, etc.)
+- [x] Create resource detail pages with descriptions and links
+- [x] Add tag-based filtering
+- [x] Implement favorites/bookmarking system
+- [x] Create responsive layout for mobile and desktop
+- [x] Add quick copy buttons for URLs
+- [x] Test search and filtering functionality
