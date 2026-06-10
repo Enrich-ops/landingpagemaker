@@ -59,3 +59,25 @@
 - [x] Create responsive layout for mobile and desktop
 - [x] Add quick copy buttons for URLs
 - [x] Test search and filtering functionality
+
+## Website Brand Scanner
+- [x] Server-side proxy endpoint to fetch and parse any public URL
+- [x] Extract CSS custom properties and computed color values
+- [x] Extract Google Fonts / web font declarations from stylesheets
+- [x] Extract logo from og:image, apple-touch-icon, or linked SVG/PNG
+- [x] Extract favicon as fallback logo
+- [x] Return structured brand object: colors[], fonts[], logoUrl, siteName
+- [x] Frontend scanner modal with URL input and loading state
+- [x] Display extracted brand swatches, fonts, and logo preview
+- [x] One-click "Apply to Style Guide" to populate editor style panel
+- [x] Handle CORS errors and unreachable sites gracefully
+
+## Elementor JSON Export
+- [x] Research Elementor widget JSON schema structure
+- [x] Map landing page sections to Elementor widget types
+- [x] Build Elementor JSON generator utility
+- [x] Support heading, text, button, image, divider, section/column widgets
+- [x] Apply brand colors and fonts into Elementor global settings block
+- [x] Generate valid .json file for Elementor Template Library import
+- [x] Add "Export for Elementor" button in editor export panel
+- [x] Test import into Elementor (verify structure is accepted)

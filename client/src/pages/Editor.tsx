@@ -10,15 +10,46 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useBuilder } from '@/contexts/BuilderContext';
 import { LandingPagePreview } from '@/components/LandingPagePreview';
 import { useLocation } from 'wouter';
-import { ArrowLeft, Download, Eye, EyeOff, Palette, FileText, Settings } from 'lucide-react';
+import { ArrowLeft, Download, Eye, EyeOff, Palette, FileText, Settings, Globe } from 'lucide-react';
 import { generateHTML, downloadHTML } from '@/utils/htmlExporter';
 import { toast } from 'sonner';
 import { FONT_OPTIONS } from '@shared/template-types';
+import BrandScanner, { type BrandData } from '@/components/BrandScanner';
+import { exportElementor, downloadElementor } from '@/utils/elementorExporter';
 
 export default function Editor() {
   const { landingPageData, currentTemplate, updateContent, updateStyles, toggleSection } = useBuilder();
   const [, setLocation] = useLocation();
   const [previewMode, setPreviewMode] = useState<'desktop' | 'mobile'>('desktop');
+  const [scannerOpen, setScannerOpen] = useState(false);
+
+  const handleBrandApply = (brand: BrandData) => {
+    // Apply colors (primary = first, secondary = second, accent = third)
+    const [c0, c1, c2] = brand.colors;
+    const colorPatch: Record<string, string> = {};
+    if (c0) colorPatch.primary = c0.hex;
+    if (c1) colorPatch.secondary = c1.hex;
+    if (c2) colorPatch.accent = c2.hex;
+    if (Object.keys(colorPatch).length > 0) {
+      updateStyles({ colors: { ...landingPageData!.styles.colors, ...colorPatch } });
+    }
+    // Apply fonts — first font → heading, second → body
+    const [f0, f1] = brand.fonts;
+    if (f0 || f1) {
+      const fontPatch: Record<string, string> = {};
+      if (f0) fontPatch.heading = f0.family;
+      if (f1) fontPatch.body = f1.family;
+      else if (f0) fontPatch.body = f0.family;
+      updateStyles({ fonts: { ...landingPageData!.styles.fonts, ...fontPatch } });
+    }
+    // Apply logo and site name
+    if (brand.logoUrl || brand.ogImage) {
+      updateContent({ logo: brand.logoUrl ?? brand.ogImage ?? '' });
+    }
+    if (brand.siteName) {
+      updateContent({ companyName: brand.siteName });
+    }
+  };
 
   if (!landingPageData) {
     return (
@@ -61,6 +92,30 @@ export default function Editor() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setScannerOpen(true)}
+              >
+                <Globe className="h-4 w-4 mr-2" />
+                Scan Brand
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => {
+                  try {
+                    downloadElementor(landingPageData, `elementor-${Date.now()}.json`);
+                    toast.success('Elementor template exported!');
+                  } catch (error) {
+                    console.error('Elementor export failed:', error);
+                    toast.error('Failed to export Elementor template');
+                  }
+                }}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Elementor
+              </Button>
               <Button 
                 variant="outline" 
                 size="sm"
@@ -209,6 +264,18 @@ export default function Editor() {
 
             {/* Style Tab */}
             <TabsContent value="style" className="p-4 space-y-6">
+              {/* Brand Scanner CTA */}
+              <div className="flex items-center justify-between p-3 rounded-lg bg-blue-50 border border-blue-200">
+                <div>
+                  <p className="text-sm font-medium text-blue-900">Auto-fill from a website</p>
+                  <p className="text-xs text-blue-700">Scan any URL to extract colors, fonts &amp; logo</p>
+                </div>
+                <Button size="sm" variant="outline" className="border-blue-400 text-blue-700 hover:bg-blue-100" onClick={() => setScannerOpen(true)}>
+                  <Globe className="h-3.5 w-3.5 mr-1.5" />
+                  Scan
+                </Button>
+              </div>
+
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Brand Colors</CardTitle>
@@ -416,6 +483,13 @@ export default function Editor() {
           </div>
         </div>
       </div>
+
+      {/* Brand Scanner Modal */}
+      <BrandScanner
+        open={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onApply={handleBrandApply}
+      />
     </div>
   );
 }
