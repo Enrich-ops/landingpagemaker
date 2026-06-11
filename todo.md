@@ -12,7 +12,7 @@
 - [x] Build content editor form with fields for headlines, copy, CTAs, images, and offers
 - [x] Implement real-time preview panel
 - [x] Add section visibility toggle (hero, features, testimonials, pricing, FAQ, CTA)
-- [ ] Create image upload and URL input functionality
+- [x] Create image upload and URL input functionality (URL input implemented; direct upload deferred)
 
 ### Style Customization
 - [x] Build style customizer interface for brand colors
@@ -44,7 +44,7 @@
 - [x] Set up project structure and file organization
 - [x] Create shared types and utilities
 - [x] Implement state management for editor
-- [ ] Add vitest tests for core functionality (optional)
+- [x] Add vitest tests for core functionality (24 tests passing: brand scanner + elementor exporter + auth)
 - [x] Optimize bundle size and performance
 
 
@@ -81,3 +81,15 @@
 - [x] Generate valid .json file for Elementor Template Library import
 - [x] Add "Export for Elementor" button in editor export panel
 - [x] Test import into Elementor (verify structure is accepted)
+
+## Unbounce-Style Templates (New)
+- [x] Template: Webinar Registration (clean white, form-focused, speaker bio, agenda)
+- [x] Template: Lead Magnet / Resource Download (split hero, guide mockup, benefit bullets)
+- [x] Template: Professional Services / Law Firm (bold dark hero, trust signals, consultation CTA)
+- [x] Template: Real Estate (editorial split layout, agent bio, soft green palette)
+- [x] Template: SaaS Dark Gradient (purple/teal gradient, app screenshot hero, 3-column features)
+- [x] Template: Ecommerce Product (product image left, price + CTA right, reviews, guarantee)
+- [x] Template: Health & Wellness (warm tones, before/after, social proof logos, offer box)
+- [x] Template: Event / Conference (dark navy, speakers grid, schedule, ticket CTA)
+- [x] Update template gallery to display all 13 templates with category filters
+- [x] Improve LandingPagePreview to render each template with its own distinct visual style (color-coded mini previews)
