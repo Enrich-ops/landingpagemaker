@@ -41,6 +41,8 @@ export interface Clip {
   captions: boolean;
   /** Overlay-mode only: on-screen hook text. */
   hookText?: string;
+  /** Overlay-mode border colour, e.g. #111111. */
+  border?: string;
   /** Caption/description posted to the platforms. */
   caption?: string;
   file?: string;
@@ -67,4 +69,6 @@ export interface Project {
   autoPost: Platform[];
   frame: FrameMode;
   captions: boolean;
+  /** Overlay mode: how many hook/caption variants to render (1-6). */
+  variants?: number;
 }

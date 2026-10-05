@@ -6,7 +6,7 @@ import { probeDuration, run } from "./ffmpeg";
 import { transcribe } from "./transcribe";
 import { selectClips } from "./selectClips";
 import { audioCodec, overlayRender, renderClip } from "./render";
-import { validateCaption } from "./campaign";
+import { planVariants, validateCaption } from "./campaign";
 import { tiktokPost } from "./publish/tiktok";
 import { youtubePost } from "./publish/youtube";
 import { tokens } from "./store";
@@ -56,14 +56,17 @@ export function startProject(id: string): void {
       projects.update(id, { duration });
 
       if (p.mode === "overlay") {
-        // Campaign mode: the whole supplied edit becomes exactly one "clip" (no selection, no cutting).
-        const clip: Clip = {
-          id: newId(), projectId: id, start: 0, end: duration, title: p.title, hook: "", reason: "Provided campaign edit",
-          score: 100, status: "pending", frame: "fill", captions: false, posts: {},
-        };
-        clips.put(clip);
+        // Campaign mode: each variant is the WHOLE supplied edit (no selection, no cutting), differing only
+        // in overlay hook, border colour and caption, so results can be compared per hook/caption.
+        const variants = planVariants(p.variants ?? 3);
+        for (const v of variants)
+          clips.put({
+            id: newId(), projectId: id, start: 0, end: duration, title: `${p.title} · ${v.hookText}`.slice(0, 100),
+            hook: v.hookText, hookText: v.hookText, caption: v.caption, border: v.border,
+            reason: "Provided campaign edit + overlay", score: 100, status: "pending", frame: "fill", captions: false, posts: {},
+          });
         projects.update(id, { stage: "rendering" });
-        await renderOne(clip.id);
+        for (const c of clips.forProject(id)) await renderOne(c.id);
       } else {
         projects.update(id, { stage: "transcribing" });
         const transcript = await transcribe(source, dir);
@@ -94,7 +97,7 @@ export async function renderOne(clipId: string): Promise<void> {
     const out = clipFile(c);
     if (p.mode === "overlay") {
       await overlayRender({
-        source, out, hookText: c.hookText, hookSeconds: Math.min(c.end, 5), audioCodec: await audioCodec(source),
+        source, out, hookText: c.hookText, borderColor: c.border, hookSeconds: Math.min(c.end, 4), audioCodec: await audioCodec(source),
       });
     } else {
       const transcript = JSON.parse(fs.readFileSync(path.join(projectDir(p.id), "transcript.json"), "utf8"));

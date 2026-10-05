@@ -30,3 +30,26 @@ export function validateCaption(caption: string): string[] {
     problems.push("Brief forbids hashtags not affiliated with the campaign; remove all hashtags.");
   return problems;
 }
+
+/** Border colours for A/B variants (dark, high-contrast against typical footage). */
+export const borderPalette = ["#111111", "#0b1f3a", "#3a0b0b", "#0b3a22", "#2a0b3a", "#3a2a0b"];
+
+export interface Variant {
+  hookText: string;
+  caption: string;
+  border: string;
+}
+
+/**
+ * Plan N distinct hook/caption/border combos from the brief's approved lists.
+ * Hooks and captions are offset against each other so no two variants share either,
+ * which makes the performance of each hook and each caption separable.
+ */
+export function planVariants(n: number): Variant[] {
+  const count = Math.max(1, Math.min(n, campaign.suggestedHooks.length));
+  return Array.from({ length: count }, (_, i) => ({
+    hookText: campaign.suggestedHooks[i],
+    caption: campaign.mandatoryCaptions[i % campaign.mandatoryCaptions.length],
+    border: borderPalette[i % borderPalette.length],
+  }));
+}

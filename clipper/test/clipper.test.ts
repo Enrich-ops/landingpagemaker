@@ -4,7 +4,7 @@ import { extractJson, normalizeClips } from "../src/selectClips";
 import { mergeChunks } from "../src/transcribe";
 import { pickPrivacy, planChunks } from "../src/publish/tiktok";
 import { shortsMetadata } from "../src/publish/youtube";
-import { validateCaption } from "../src/campaign";
+import { planVariants, validateCaption } from "../src/campaign";
 import { videoFilter } from "../src/render";
 import type { Transcript, Word } from "../src/types";
 
@@ -103,5 +103,17 @@ describe("render filter", () => {
     expect(videoFilter("fill", "C:\\a'b.ass")).toContain("ass='C\\:/a\\'b.ass'");
     expect(videoFilter("blur")).toContain("boxblur");
     expect(videoFilter("fill")).not.toContain("boxblur");
+  });
+});
+
+describe("campaign variants", () => {
+  it("plans distinct, compliant hook/caption/border combos", () => {
+    const v = planVariants(6);
+    expect(v).toHaveLength(6);
+    expect(new Set(v.map((x) => x.hookText)).size).toBe(6);
+    expect(new Set(v.map((x) => x.border)).size).toBe(6);
+    expect(v.every((x) => validateCaption(x.caption).length === 0)).toBe(true);
+    expect(planVariants(99)).toHaveLength(6);
+    expect(planVariants(0)).toHaveLength(1);
   });
 });

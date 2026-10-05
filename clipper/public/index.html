@@ -43,6 +43,7 @@
       <input type="file" id="file" accept="video/*">
       <button class="sec" onclick="upload()">Upload &amp; start</button>
     </div>
+    <div class="row mut" style="margin-top:10px;display:none" id="ovopts"><label>Variants to A/B test <select id="variants"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option><option>6</option></select></label> <span>Each uses a different approved hook, mandatory caption and border colour.</span></div>
     <div class="row mut" style="margin-top:10px" id="opts">
       <label>Framing <select id="frame"><option value="blur">Blur background (keep whole frame)</option><option value="fill">Fill (center crop)</option></select></label>
       <label><input type="checkbox" id="captions" checked> Burn-in captions</label>
@@ -64,12 +65,12 @@ const api = async (path, opts) => {
 function setMode(m) {
   mode = m;
   $('tab-clip').className = m === 'clip' ? '' : 'sec'; $('tab-overlay').className = m === 'overlay' ? '' : 'sec';
-  $('opts').style.display = m === 'clip' ? '' : 'none';
+  $('opts').style.display = m === 'clip' ? '' : 'none'; $('ovopts').style.display = m === 'overlay' ? '' : 'none';
   $('modehelp').textContent = m === 'clip'
     ? 'AI transcribes your video, finds the most viral moments, cuts them to 9:16 with captions.'
     : 'For brief-controlled edits: the provided video is never trimmed, cropped or re-mixed and its audio is untouched. You can only add a hook overlay and a border. Captions are checked against the brief before posting.';
 }
-const qs = () => new URLSearchParams({ mode, frame: $('frame').value, captions: $('captions').checked ? '1' : '0',
+const qs = () => new URLSearchParams({ mode, variants: $('variants').value, frame: $('frame').value, captions: $('captions').checked ? '1' : '0',
   autoPost: ['tiktok','youtube'].filter((p) => $('ap-' + p).checked).join(',') });
 
 async function fromUrl() {

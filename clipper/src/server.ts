@@ -48,6 +48,7 @@ const parseCommon = (q: Request["query"]) => ({
   mode: q.mode === "overlay" ? ("overlay" as const) : ("clip" as const),
   frame: q.frame === "fill" ? ("fill" as const) : ("blur" as const),
   captions: q.captions !== "0",
+  variants: Math.max(1, Math.min(6, Number(q.variants) || 3)),
   autoPost: String(q.autoPost ?? "").split(",").filter((x): x is Platform => x === "tiktok" || x === "youtube"),
 });
 
@@ -84,6 +85,7 @@ app.patch("/api/clips/:id", wrap(async (req, res) => {
   if (typeof b.title === "string") patch.title = b.title.slice(0, 100);
   if (typeof b.caption === "string") patch.caption = b.caption;
   if (typeof b.hookText === "string") patch.hookText = b.hookText.slice(0, 120);
+  if (typeof b.border === "string" && /^#[0-9a-fA-F]{6}$/.test(b.border)) patch.border = b.border;
   if (p.mode === "clip") {
     // Trim only applies in clip mode; overlay mode must never alter the supplied edit's length.
     if (typeof b.start === "number" && typeof b.end === "number" && b.end - b.start >= 5 && b.start >= 0) Object.assign(patch, { start: b.start, end: b.end });
