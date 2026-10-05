@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clipper</title>
+<style>
+  :root { --bg:#0f1115; --card:#181b22; --line:#2a2f3a; --fg:#e8eaf0; --mut:#8b93a5; --acc:#7c5cff; --ok:#2ecc71; --bad:#ff5c5c; }
+  @media (prefers-color-scheme: light) { :root { --bg:#f5f6f9; --card:#fff; --line:#dfe2ea; --fg:#14171f; --mut:#657089; } }
+  * { box-sizing:border-box } body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.45 system-ui,sans-serif }
+  main { max-width:1100px; margin:0 auto; padding:16px }
+  h1 { font-size:20px; margin:8px 0 } h2 { font-size:16px; margin:0 0 10px }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:14px }
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center }
+  input[type=text], input[type=url], textarea, select { background:var(--bg); color:var(--fg); border:1px solid var(--line); border-radius:8px; padding:8px; font:inherit }
+  textarea { width:100%; min-height:60px } input[type=url], input.grow { flex:1; min-width:200px }
+  button { background:var(--acc); color:#fff; border:0; border-radius:8px; padding:8px 14px; font:inherit; cursor:pointer }
+  button.sec { background:transparent; color:var(--fg); border:1px solid var(--line) } button:disabled { opacity:.5; cursor:default }
+  .mut { color:var(--mut); font-size:13px } .pill { font-size:12px; padding:2px 8px; border-radius:99px; border:1px solid var(--line) }
+  .ok { color:var(--ok) } .bad { color:var(--bad) }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:12px }
+  .clip video { width:100%; border-radius:8px; background:#000; aspect-ratio:9/16; object-fit:contain }
+  .clip { border:1px solid var(--line); border-radius:10px; padding:10px; display:flex; flex-direction:column; gap:8px }
+  .tabs button { margin-right:6px }
+</style>
+</head>
+<body>
+<main>
+  <h1>Clipper</h1>
+  <div id="conn" class="card"></div>
+
+  <div class="card">
+    <div class="tabs row" style="margin-bottom:10px">
+      <button id="tab-clip" onclick="setMode('clip')">Make clips from long video</button>
+      <button id="tab-overlay" class="sec" onclick="setMode('overlay')">Campaign edit (no cuts)</button>
+    </div>
+    <p id="modehelp" class="mut"></p>
+    <div class="row">
+      <input type="url" id="url" placeholder="Paste a video URL (needs yt-dlp on the server)…">
+      <button onclick="fromUrl()">Start</button>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <input type="file" id="file" accept="video/*">
+      <button class="sec" onclick="upload()">Upload &amp; start</button>
+    </div>
+    <div class="row mut" style="margin-top:10px" id="opts">
+      <label>Framing <select id="frame"><option value="blur">Blur background (keep whole frame)</option><option value="fill">Fill (center crop)</option></select></label>
+      <label><input type="checkbox" id="captions" checked> Burn-in captions</label>
+      <label>Auto-post top clips to <label><input type="checkbox" id="ap-tiktok"> TikTok</label> <label><input type="checkbox" id="ap-youtube"> YouTube</label></label>
+    </div>
+  </div>
+
+  <div id="projects"></div>
+</main>
+<script>
+let mode = 'clip', status = null;
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const api = async (path, opts) => {
+  const r = await fetch(path, opts); const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || r.statusText); return j;
+};
+
+function setMode(m) {
+  mode = m;
+  $('tab-clip').className = m === 'clip' ? '' : 'sec'; $('tab-overlay').className = m === 'overlay' ? '' : 'sec';
+  $('opts').style.display = m === 'clip' ? '' : 'none';
+  $('modehelp').textContent = m === 'clip'
+    ? 'AI transcribes your video, finds the most viral moments, cuts them to 9:16 with captions.'
+    : 'For brief-controlled edits: the provided video is never trimmed, cropped or re-mixed and its audio is untouched. You can only add a hook overlay and a border. Captions are checked against the brief before posting.';
+}
+const qs = () => new URLSearchParams({ mode, frame: $('frame').value, captions: $('captions').checked ? '1' : '0',
+  autoPost: ['tiktok','youtube'].filter((p) => $('ap-' + p).checked).join(',') });
+
+async function fromUrl() {
+  const url = $('url').value.trim(); if (!url) return;
+  try { await api('/api/projects/url?' + qs(), { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ url }) }); $('url').value=''; refresh(); }
+  catch (e) { alert(e.message); }
+}
+async function upload() {
+  const f = $('file').files[0]; if (!f) return;
+  try { await api('/api/projects/upload?' + qs() + '&name=' + encodeURIComponent(f.name), { method: 'POST', body: f }); refresh(); }
+  catch (e) { alert(e.message); }
+}
+
+function connCard() {
+  const s = status; if (!s) return '';
+  const item = (key, label) => {
+    const x = s[key];
+    if (x.connected) return `<span class="ok">● ${label}: ${esc(x.account || 'connected')}</span> <button class="sec" onclick="disc('${key}')">Disconnect</button>`;
+    if (!x.configured) return `<span class="mut">○ ${label}: add API credentials to .env</span>`;
+    return `<a href="/auth/${key}"><button>Connect ${label}</button></a>`;
+  };
+  const keys = (!s.keys.openai || !s.keys.anthropic) ? `<div class="bad">Missing in .env: ${[!s.keys.openai && 'OPENAI_API_KEY', !s.keys.anthropic && 'ANTHROPIC_API_KEY'].filter(Boolean).join(', ')} (not needed for Campaign edit mode)</div>` : '';
+  return `<div class="row">${item('tiktok','TikTok')} ${item('youtube','YouTube')}</div>${keys}`;
+}
+async function disc(p) { await api(`/auth/${p}/disconnect`, { method: 'POST' }); refresh(); }
+
+function clipCard(p, c) {
+  const posts = Object.entries(c.posts).map(([k, v]) => `<div class="mut">${k}: <b class="${v.status==='posted'?'ok':v.status==='failed'?'bad':''}">${v.status}</b> ${v.url ? `<a href="${esc(v.url)}" target="_blank">open</a>` : ''} ${v.error ? esc(v.error) : ''}</div>`).join('');
+  const overlay = p.mode === 'overlay';
+  const mand = status ? status.campaign.mandatoryCaptions : [];
+  const hooks = status ? status.campaign.suggestedHooks : [];
+  const defCap = c.caption ?? (overlay ? mand[0] : c.title);
+  return `<div class="clip" data-id="${c.id}">
+    ${c.url && c.status==='ready' ? `<video src="${c.url}" controls preload="metadata"></video>` : `<div class="mut">${c.status}${c.error ? ': ' + esc(c.error) : '…'}</div>`}
+    <div><b>${esc(c.title)}</b> <span class="pill">score ${Math.round(c.score)}</span></div>
+    ${overlay ? '' : `<div class="mut">${c.start.toFixed(0)}s–${c.end.toFixed(0)}s · ${esc(c.reason)}</div>`}
+    ${overlay ? `<select class="hook" onchange="this.nextElementSibling.value=this.value"><option value="">Hook text…</option>${hooks.map((h)=>`<option>${esc(h)}</option>`).join('')}</select><input type="text" class="hooktext" placeholder="On-screen hook" value="${esc(c.hookText||'')}"><button class="sec" onclick="rerender('${c.id}')">Apply hook &amp; re-render</button>` : ''}
+    ${overlay ? `<select onchange="this.nextElementSibling.value=this.value"><option value="">Mandatory caption…</option>${mand.map((h)=>`<option>${esc(h)}</option>`).join('')}</select>` : ''}
+    <textarea class="cap">${esc(defCap)}</textarea>
+    <div class="row">
+      <label><input type="checkbox" class="pt" checked> TikTok</label>
+      <label><input type="checkbox" class="py" checked> YouTube</label>
+      <select class="tm" title="TikTok mode"><option value="direct">TikTok: post now</option><option value="draft">TikTok: send to app inbox (add Shop product)</option></select>
+    </div>
+    <div class="row"><button ${c.status!=='ready'?'disabled':''} onclick="publish('${c.id}')">Publish</button>
+      ${c.status==='ready' ? `<a href="${c.url}" download><button class="sec">Download</button></a>` : ''}</div>
+    ${c.scheduledAt ? `<div class="mut">Scheduled ${new Date(c.scheduledAt).toLocaleString()}</div>` : ''}
+    ${posts}
+  </div>`;
+}
+
+function render(list) {
+  $('conn').innerHTML = connCard();
+  $('projects').innerHTML = list.map((p) => `<div class="card"><h2>${esc(p.title)} <span class="pill">${p.mode}</span> <span class="pill ${p.stage==='failed'?'bad':''}">${p.stage}</span></h2>
+    ${p.error ? `<div class="bad">${esc(p.error)}</div>` : ''}
+    <div class="grid">${p.clips.map((c) => clipCard(p, c)).join('')}</div></div>`).join('') || '<p class="mut">No projects yet.</p>';
+}
+async function rerender(id) {
+  const el = document.querySelector(`[data-id="${id}"]`);
+  await api('/api/clips/' + id, { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ hookText: el.querySelector('.hooktext').value, rerender: true }) });
+  refresh();
+}
+async function publish(id) {
+  const el = document.querySelector(`[data-id="${id}"]`);
+  const platforms = [el.querySelector('.pt').checked && 'tiktok', el.querySelector('.py').checked && 'youtube'].filter(Boolean);
+  try {
+    await api(`/api/clips/${id}/publish`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ platforms, caption: el.querySelector('.cap').value, tiktokMode: el.querySelector('.tm').value }) });
+  } catch (e) { alert(e.message); }
+  refresh();
+}
+let busy = false;
+async function refresh() {
+  if (busy) return; busy = true;
+  try {
+    status = await api('/api/status');
+    const list = await api('/api/projects');
+    // Don't clobber text the user is typing: only re-render when no field is focused.
+    if (!document.activeElement || !['TEXTAREA','INPUT','SELECT'].includes(document.activeElement.tagName) || document.activeElement.id === 'url') render(list);
+  } catch (e) { console.error(e); } finally { busy = false; }
+}
+setMode('clip'); refresh(); setInterval(refresh, 4000);
+</script>
+</body>
+</html>
